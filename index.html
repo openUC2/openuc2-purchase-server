@@ -1,0 +1,1679 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Purchase Ledger</title>
+<style>
+  :root {
+    --bg: #EDF1EF; --paper: #FFFFFF; --soft: #F4F7F6; --ink: #1C2826; --muted: #5D6B68; --rule: #D3DCD9;
+    --accent: #1F6B58; --accent-ink: #FFFFFF; --accent-soft: #E3EFEB; --est: #A86400; --est-soft: #FBF1E1; --danger: #B0382E; --due: #B0382E; --due-soft: #F8E5E2; --ship: #2D5F8F; --ship-soft: #E3ECF5; --ship-ink: #FFFFFF;
+    --num: "DIN Alternate", "Bahnschrift", "DIN Next", "Roboto Condensed", system-ui, sans-serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141A19; --paper: #1C2422; --soft: #222C2A; --ink: #E4EBE9; --muted: #97A5A2; --rule: #2F3B39;
+      --accent: #4FB394; --accent-ink: #0E1715; --accent-soft: #1F3530; --est: #E3A54A; --est-soft: #3A2D18; --danger: #E36A5F; --due: #E8776D; --due-soft: #3B2220; --ship: #86B6E3; --ship-soft: #1C2A38; --ship-ink: #0E1715;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141A19; --paper: #1C2422; --soft: #222C2A; --ink: #E4EBE9; --muted: #97A5A2; --rule: #2F3B39;
+    --accent: #4FB394; --accent-ink: #0E1715; --accent-soft: #1F3530; --est: #E3A54A; --est-soft: #3A2D18; --danger: #E36A5F; --due: #E8776D; --due-soft: #3B2220; --ship: #86B6E3; --ship-soft: #1C2A38; --ship-ink: #0E1715;
+    color-scheme: dark;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  /* Header */
+  .top { padding-top: 28px; }
+  .title-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  #status { color: var(--muted); font-size: 13px; }
+  #status.bad { color: var(--danger); }
+  .tabs { display: flex; gap: 26px; margin-top: 18px; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+  .tabs button {
+    background: none; border: 0; padding: 10px 0 12px; font: inherit; font-size: 16px; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  }
+  .tabs button[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+
+  #view { padding-top: 20px; padding-bottom: 40px; }
+  .card { background: var(--paper); border-radius: 8px; padding: 18px 20px; margin-bottom: 14px; }
+  h2 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+  .hint { color: var(--muted); margin: 0 0 12px; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+  .est { color: var(--est); }
+  .empty { background: var(--paper); border-radius: 8px; padding: 40px 20px; color: var(--muted); text-align: center; }
+
+  /* Controls */
+  input, select {
+    font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule);
+    border-radius: 6px; height: 38px; padding: 0 10px; min-width: 0; width: 100%;
+  }
+  input[type=number] { font-family: var(--num); font-variant-numeric: tabular-nums; }
+  input[type=checkbox] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input::placeholder { color: var(--muted); opacity: .7; }
+  input.has-est::placeholder { color: var(--est); opacity: 1; }
+  .btn {
+    font: inherit; font-size: 14px; height: 38px; padding: 0 16px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--paper); color: var(--ink); white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:disabled { opacity: .45; cursor: default; }
+  .btn.ghost { background: transparent; }
+  .btn.small { height: 32px; padding: 0 12px; font-size: 13px; }
+  .link { background: none; border: 0; padding: 0; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; }
+  .danger { color: var(--danger) !important; }
+  .x {
+    width: 32px; height: 32px; border: 0; border-radius: 6px; background: transparent; color: var(--muted);
+    font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .x:hover { background: var(--soft); color: var(--danger); }
+
+  /* New purchase */
+  .fields { display: grid; grid-template-columns: 160px minmax(0, 1fr) 170px 160px; gap: 12px; }
+  .field.note { grid-column: span 2; }
+  .field.invis { visibility: hidden; }
+  .field[hidden] { display: none; }
+  .field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .banner {
+    background: var(--est-soft); color: var(--ink); border-radius: 8px; padding: 10px 16px; margin-bottom: 14px;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip.ghost { border-style: dashed; color: var(--muted); }
+  .chip .count {
+    font: 600 12px/18px var(--num); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; text-align: center;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .chip[aria-pressed="true"] .count { background: var(--accent-ink); color: var(--accent); }
+  .picker { margin-top: 14px; border: 1px solid var(--rule); border-radius: 8px; background: var(--soft); }
+  .picker-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+  .picker-head .muted { flex: 1; font-size: 14px; }
+  .picker-body { padding: 4px 14px 6px; }
+  .picker-body .hint { margin: 12px 0; }
+  .ref { font-size: 13px; color: var(--muted); }
+
+  .line { display: grid; grid-template-columns: minmax(0, 1fr) 150px 130px 110px 32px; gap: 8px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+  .line.head { padding: 8px 0 6px; font-size: 13px; color: var(--muted); }
+  .line.head > :nth-child(4) { text-align: right; }
+  .line:last-child { border-bottom: 0; }
+  .line.on { }
+  .ck { display: flex; align-items: center; gap: 10px; cursor: pointer; min-height: 32px; }
+  .ck-name { font-weight: 500; }
+  .c-name .ref { margin-top: 1px; }
+  .crow .c-name .ref { padding-left: 28px; }
+  .crow:not(.on) .ck-name { font-weight: 400; }
+  .c-qty, .c-price { display: flex; align-items: center; gap: 6px; }
+  .c-qty .unit { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .c-qty .unit-input { width: 56px; flex: none; }
+  .c-price .cur { color: var(--muted); }
+  .c-sub { text-align: right; font-size: 16px; }
+
+  .sgroup { padding: 8px 0; border-bottom: 1px solid var(--rule); }
+  .sgroup:last-child { border-bottom: 0; }
+  .sg-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .srow { display: grid; grid-template-columns: minmax(0, 1fr) auto 110px 32px; gap: 12px; align-items: center; font-size: 14px; padding: 2px 0; }
+  .srow .qp { color: var(--muted); white-space: nowrap; }
+  .srow .num { text-align: right; }
+
+  .totalbar {
+    position: sticky; bottom: 0; z-index: 5; background: var(--paper); border-top: 1px solid var(--rule);
+    border-radius: 8px 8px 0 0; padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .tot { flex: 1; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .tot-label { font-size: 14px; color: var(--muted); }
+  .tot-num { font: 700 34px/1.1 var(--num); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+  .tot-note { font-size: 13px; color: var(--muted); }
+  .tot-actions { display: flex; gap: 8px; }
+
+  /* History */
+  .hist-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .hist-tools select { width: auto; }
+  .hist-tools input[type=search] { flex: 1 1 160px; width: auto; min-width: 140px; }
+  .grow { flex: 1; }
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 14px; border: 0; background: var(--paper); color: var(--ink); padding: 0 14px; height: 36px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .summary { margin: 0 0 14px; color: var(--muted); }
+  .summary .num { color: var(--ink); font-size: 18px; }
+  .day { margin-bottom: 22px; }
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 8px; }
+  .day-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .day-head .num { font-size: 18px; }
+  .entry { background: var(--paper); border-radius: 8px; padding: 14px 18px; margin-bottom: 8px; }
+  .entry-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+  .entry-head .who { flex: 1; min-width: 0; }
+  .entry-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.unpaid { background: var(--due-soft); color: var(--due); }
+  .pill.paid { background: var(--accent-soft); color: var(--accent); }
+  .pill.ship { background: var(--ship-soft); color: var(--ship); }
+  .pill.ordered { background: var(--soft); color: var(--muted); border: 1px solid var(--rule); }
+  .ship-txt { color: var(--ship); }
+  .delcell { display: flex; align-items: center; gap: 6px; }
+  .delcell select { width: 118px; height: 32px; padding: 0 6px; font-size: 13px; }
+  .delcell input[type=date] { width: 140px; height: 32px; font-size: 13px; padding: 0 6px; }
+  .delcell .muted { font-size: 12px; }
+  .entry.del-editing table { table-layout: auto; }
+  .paybar select { width: auto; height: 32px; }
+  .paybar input[type=date] { height: 32px; }
+  .due { color: var(--due); }
+  .figures { display: flex; flex-wrap: wrap; gap: 12px 36px; align-items: flex-end; background: var(--paper); border-radius: 8px; padding: 14px 20px; margin-bottom: 10px; }
+  .figures > div { display: flex; flex-direction: column; }
+  .fig-label { font-size: 13px; color: var(--muted); }
+  .fig { font: 700 24px/1.2 var(--num); font-variant-numeric: tabular-nums; }
+  .fig-sub { font-size: 12px; color: var(--muted); }
+  .figures .btn { margin-left: auto; align-self: center; }
+  .menu { position: relative; }
+  .menu > summary { list-style: none; display: inline-flex; align-items: center; }
+  .menu > summary::-webkit-details-marker { display: none; }
+  .menu-pop {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; width: 300px; max-width: calc(100vw - 28px);
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 6px;
+    box-shadow: 0 8px 24px rgba(20, 30, 28, .14);
+  }
+  .menu-pop button { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; background: none; border: 0; border-radius: 6px; padding: 8px 10px; color: var(--ink); cursor: pointer; }
+  .menu-pop button:hover { background: var(--soft); }
+  .menu-pop button small { display: block; color: var(--muted); font-size: 12px; }
+  .menu-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); padding: 10px; margin-top: 4px; border-top: 1px solid var(--rule); cursor: pointer; }
+  .menu-opt input { margin-top: 1px; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--muted); font-weight: 400; font-size: 13px; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  th.r, td.r { text-align: right; white-space: nowrap; }
+  td small { color: var(--muted); }
+  .entry table { table-layout: fixed; }
+  .entry table { min-width: 720px; }
+  .entry th:nth-child(1) { width: 29%; } .entry th:nth-child(2) { width: 10%; } .entry th:nth-child(5) { width: 15%; } .entry th:nth-child(6) { width: 21%; }
+  td.del { font-size: 13px; }
+  td.pay { font-size: 13px; white-space: nowrap; }
+  td.pay .ck { min-height: 0; gap: 8px; }
+  .paid-txt { color: var(--accent); }
+  .paybar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 10px; padding: 12px 14px; background: var(--soft); border-radius: 8px; }
+  .paybar label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .paybar input[type=date] { width: 160px; }
+  .paybar .grow { flex: 1; }
+  .entry.paying { outline: 2px solid var(--accent); }
+  .entry.del-editing { outline-color: var(--ship); }
+  .entry-foot { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .btn.pay-btn { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.ship-btn { background: var(--ship); border-color: var(--ship); color: var(--ship-ink); font-weight: 600; }
+  .btn.pay-btn:hover, .btn.ship-btn:hover { filter: brightness(1.08); }
+  .btn .hint-txt { font-weight: 400; opacity: .85; margin-left: 6px; }
+  .srow .ck { min-height: 0; gap: 8px; }
+  .srow small { color: var(--muted); }
+  .wide-table { background: var(--paper); border-radius: 8px; padding: 6px 12px; }
+  .wide-table table { min-width: 760px; }
+
+  /* Products */
+  .addrow { display: flex; gap: 10px; }
+  .product-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .product-head h2 { margin: 0; flex: 1; }
+  .title-input { font-size: 17px; font-weight: 600; border-color: transparent; padding: 0 8px; margin-left: -8px; flex: 1; min-width: 160px; }
+  .title-input:hover { border-color: var(--rule); }
+  .set-est { color: var(--muted); font-size: 14px; }
+  .set-est .num { color: var(--ink); font-size: 16px; }
+  .prow { display: grid; grid-template-columns: minmax(0, 1.4fr) 160px 72px 64px 100px minmax(0, 1.2fr) 64px; gap: 8px 10px; align-items: center; padding: 6px 0; }
+  .prow.head { font-size: 13px; color: var(--muted); padding: 0 0 2px; }
+  .prow.new { border-top: 1px dashed var(--rule); margin-top: 6px; padding-top: 12px; }
+  .prow .x, .prow .btn { justify-self: end; }
+  .cell .mlabel { display: none; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 8px 16px; border-radius: 6px; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; max-width: 90vw;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 0 14px; }
+    .card { padding: 16px 14px; }
+    .picker-body { padding: 4px 10px 6px; }
+    input, select { font-size: 16px; }
+    .fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .entry-foot .btn { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+    .btn .hint-txt { display: none; }
+    .field.note { grid-column: 1 / -1; }
+    .figures { gap: 10px 22px; padding: 12px 14px; }
+    .fig { font-size: 20px; }
+    .figures .btn { margin-left: 0; }
+    .line { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+    .line.head { display: none; }
+    .line .c-name { grid-column: 1 / 3; }
+    .crow .c-name { grid-column: 1 / 4; }
+    .line .x { grid-column: 3; grid-row: 1; justify-self: end; }
+    .line .c-sub { grid-column: 3; }
+    .crow .spacer { display: none; }
+    .c-qty, .c-price { min-width: 0; }
+    .srow { grid-template-columns: minmax(0, 1fr) auto 32px; }
+    .srow .qp { grid-column: 1 / 2; grid-row: 2; font-size: 13px; text-align: left; }
+    .totalbar { gap: 10px; padding-left: 14px; padding-right: 14px; }
+    .tot { flex: 1 1 100%; }
+    .tot-actions { flex: 1; justify-content: flex-end; }
+    .tot-num { font-size: 28px; }
+    .hist-tools input[type=search] { flex-basis: 100%; order: 5; }
+    .prow { grid-template-columns: 1fr 1fr 1fr auto; border-bottom: 1px solid var(--rule); padding: 10px 0; }
+    .prow.head { display: none; }
+    .prow.new { border-bottom: 0; }
+    .prow > :nth-child(1) { grid-column: 1 / 4; }
+    .prow > :nth-child(7) { grid-column: 4; grid-row: 1; }
+    .prow > :nth-child(2) { grid-column: 1 / 5; }
+    .prow > :nth-child(6) { grid-column: 1 / 5; }
+    .prow.new > :nth-child(2), .prow.new > :nth-child(6) { display: none; }
+    .cell .mlabel { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap top">
+  <div class="title-row">
+    <h1>Purchase Ledger</h1>
+    <span id="status">Loading…</span>
+  </div>
+  <nav class="tabs" aria-label="Pages">
+    <button data-act="goto" data-view="new">New purchase</button>
+    <button data-act="goto" data-view="history">History</button>
+    <button data-act="goto" data-view="catalog">Categories &amp; products</button>
+  </nav>
+</div>
+<main class="wrap" id="view"></main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Settings ---------- */
+const CURRENCY = "€";
+const CURRENCY_CODE = "EUR";
+const LOCALE = "en-IE";    // number and date formatting (€1,234.56)
+
+/* ---------- Helpers ---------- */
+const view = document.getElementById("view");
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const toNum = (v) => { if (v === "" || v === null || v === undefined) return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+const num = (n) => n == null ? "" : Number(n).toLocaleString(LOCALE, { maximumFractionDigits: 4 });
+const money = (n) => n == null ? "—" : CURRENCY + Number(n).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const uprice = (n) => n == null ? "—" : CURRENCY + Number(n).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const qtyUnit = (q, u) => `${num(toNum(q) ?? 0)}${u ? " " + u : ""}`;
+const plural = (n, word, many) => `${n} ${n === 1 ? word : (many || word + "s")}`;
+const sel = (attr, val) => `[${attr}="${CSS.escape(String(val))}"]`;
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function parseDate(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function dateLabel(s, withWeek = true) {
+  if (!s) return "";
+  const dt = parseDate(s), otherYear = dt.getFullYear() !== new Date().getFullYear();
+  const txt = dt.toLocaleDateString("en-US", { weekday: withWeek ? "short" : undefined, month: "short", day: "numeric", year: otherYear ? "numeric" : undefined });
+  return txt + (withWeek && s === todayStr() ? " (today)" : "");
+}
+function shortDate(s) {
+  if (!s) return "";
+  const dt = parseDate(s), otherYear = dt.getFullYear() !== new Date().getFullYear();
+  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: otherYear ? "2-digit" : undefined });
+}
+const monthLabel = (m) => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" }); };
+const norm = (s) => String(s || "").trim().toLowerCase();
+const stable = (v) => Array.isArray(v) ? "[" + v.map(stable).join(",") + "]"
+  : (v && typeof v === "object") ? "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}"
+  : JSON.stringify(v ?? null);
+
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+}
+function errMsg(e) {
+  if (e instanceof TypeError) return "can't reach the local server. Is app.py still running?";
+  return (e && e.message) || "unknown error";
+}
+
+/* ---------- State ---------- */
+const DRAFT_KEY = "ledger:draft", LOCAL_KEY = "ledger:data";
+const OTHER = "__other", NONE = "__none";
+/* payMode: "none" | "all" | "some". Lines carry their own paid flag (used when payMode is "some"). */
+const newDraft = () => ({ editingId: null, createdAt: null, date: todayStr(), supplier: "", note: "", payMode: "none", paidDate: todayStr(), keepLineDates: false, delMode: "ordered", delDate: "", delMixed: false, lines: [] });
+
+/* Draft lines: { id, productId, categoryId, category, product, unit, qty, price, est, free } */
+function normalizeDraft(d) {
+  if (!d || !Array.isArray(d.lines)) return null;
+  d.lines = d.lines.map((l) => ("part" in l && !("productId" in l))
+    ? { id: l.id || newId(), productId: null, categoryId: null, category: l.product || "", product: l.part || "", unit: l.unit || "", qty: l.qty ?? "1", price: l.price ?? null, est: l.est ?? null, free: true }
+    : l);
+  if (!d.payMode) d.payMode = d.paid ? "all" : "none";
+  if (!d.delMode) { d.delMode = "ordered"; d.delDate = ""; }
+  d.paidDate = d.paidDate || todayStr();
+  return d;
+}
+function loadDraft() { try { return normalizeDraft(JSON.parse(localStorage.getItem(DRAFT_KEY))); } catch { return null; } }
+function saveDraft() { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(state.draft)); } catch {} }
+
+const state = {
+  view: "new", mode: "loading", offline: false,
+  catalog: { categories: [], products: [] }, purchases: [], idx: { byPair: new Map(), byName: new Map() },
+  draft: loadDraft() || newDraft(), pickCat: null,
+  histMonth: "all", histQuery: "", histGroup: "date", histStatus: "all",
+  payOpen: null, payDraft: [], payDate: "",   // the purchase whose payment is being recorded in History
+  delOpen: null, delDraft: [],                // the purchase whose delivery status is being updated
+  histDelivery: "all",
+};
+
+/* Catalog: { categories: [{id, name}], products: [{id, name, categoryId, unit, qty, refPrice}] }.
+   Also converts the first version's shape (products with parts). */
+function normalizeCatalog(c) {
+  c = c || {};
+  let categories, products;
+  if (Array.isArray(c.categories)) {
+    categories = c.categories; products = Array.isArray(c.products) ? c.products : [];
+  } else {
+    categories = []; products = [];
+    for (const p of c.products || []) {
+      const cid = String(p.id || newId());
+      categories.push({ id: cid, name: p.name });
+      for (const pt of p.parts || []) products.push({ ...pt, categoryId: cid });
+    }
+  }
+  categories = categories.map((x) => ({ id: String(x.id || newId()), name: String(x.name || "") }));
+  const ids = new Set(categories.map((x) => x.id));
+  products = products.map((p) => ({
+    id: String(p.id || newId()), name: String(p.name || ""),
+    categoryId: p.categoryId && ids.has(String(p.categoryId)) ? String(p.categoryId) : null,
+    unit: String(p.unit || ""), qty: toNum(p.qty) ?? 1, refPrice: toNum(p.refPrice),
+  }));
+  return { categories, products };
+}
+// Older files kept one paid flag per purchase; now every line has its own.
+function normalizePurchase(p) {
+  const { paid, paidDate, ...rest } = p;
+  const lines = p.lines.map(normalizeLine).map((l) => {
+    const isPaid = l.paid === undefined ? !!paid : !!l.paid;
+    const date = l.paid === undefined ? paidDate : l.paidDate;
+    const delivery = ["ordered", "shipping", "delivered"].includes(l.delivery) ? l.delivery : "ordered";
+    return {
+      ...l, paid: isPaid, paidDate: isPaid ? (date || null) : null,
+      delivery, eta: delivery === "shipping" ? (l.eta || null) : null, deliveredDate: delivery === "delivered" ? (l.deliveredDate || null) : null,
+    };
+  });
+  return { ...rest, lines };
+}
+const lineLate = (l) => l.delivery === "shipping" && !!l.eta && l.eta < todayStr();
+function delInfo(p) {
+  const n = p.lines.length;
+  let d = 0, sh = 0, late = 0;
+  const etas = [], done = new Set();
+  for (const l of p.lines) {
+    if (l.delivery === "delivered") { d++; if (l.deliveredDate) done.add(l.deliveredDate); }
+    else if (l.delivery === "shipping") { sh++; if (l.eta) etas.push(l.eta); if (lineLate(l)) late++; }
+  }
+  etas.sort();
+  const status = n && d === n ? "delivered" : d > 0 ? "partly" : sh > 0 ? "shipping" : "ordered";
+  return { n, d, sh, late, nextEta: etas[0] || null, oneDate: done.size === 1 ? [...done][0] : null, status };
+}
+const DEL_LABEL = { ordered: "Ordered", shipping: "On the way", delivered: "Delivered" };
+function delPill(p) {
+  const i = delInfo(p);
+  if (i.status === "delivered") return `<span class="pill paid">${i.oneDate ? `Delivered ${esc(shortDate(i.oneDate))}` : "Delivered"}</span>`;
+  const eta = i.sh && i.nextEta ? `, ETA ${esc(shortDate(i.nextEta))}` : "";
+  const cls = i.late ? "unpaid" : i.sh ? "ship" : "ordered";
+  const late = i.late ? ", late" : "";
+  if (i.status === "partly") return `<span class="pill ${cls}">${i.d} of ${i.n} delivered${eta}${late}</span>`;
+  if (i.status === "shipping") return `<span class="pill ${cls}">On the way${eta}${late}</span>`;
+  return `<span class="pill ordered">Ordered</span>`;
+}
+function delText(l) {
+  if (l.delivery === "delivered") return `<span class="paid-txt">Delivered${l.deliveredDate ? " " + esc(shortDate(l.deliveredDate)) : ""}</span>`;
+  if (l.delivery === "shipping") {
+    if (lineLate(l)) return `<span class="due">Late, ETA was ${esc(shortDate(l.eta))}</span>`;
+    return `<span class="ship-txt">On the way${l.eta ? `, ETA ${esc(shortDate(l.eta))}` : ", no ETA yet"}</span>`;
+  }
+  return `<span class="muted">Ordered</span>`;
+}
+const lineSub = (l) => (l.price == null ? 0 : (Number(l.qty) || 0) * l.price);
+function payInfo(p) {
+  let paid = 0, unpaid = 0, nPaid = 0;
+  const dates = new Set();
+  for (const l of p.lines) {
+    if (l.paid) { paid += lineSub(l); nPaid++; if (l.paidDate) dates.add(l.paidDate); } else unpaid += lineSub(l);
+  }
+  const status = nPaid === 0 ? "unpaid" : nPaid === p.lines.length ? "paid" : "partly";
+  const sorted = [...dates].sort();
+  return { paid, unpaid, status, lastDate: sorted[sorted.length - 1] || null, oneDate: dates.size === 1 ? sorted[0] : null };
+}
+function normalizeLine(l) {
+  if (l && "part" in l && !("category" in l)) { const { part, product, ...rest } = l; return { ...rest, category: product || "", product: part || "" }; }
+  return l;
+}
+const catById = (id) => state.catalog.categories.find((c) => c.id === id) || null;
+const catName = (id) => (catById(id) || {}).name || "";
+const productsIn = (cid) => state.catalog.products.filter((p) => (cid === NONE ? !p.categoryId : p.categoryId === cid));
+
+/* ---------- Storage: the local server (data/ledger.json), or this browser if opened as a plain file ---------- */
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method, headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok) throw new Error((data && data.error) || `server error (${res.status})`);
+  return data;
+}
+async function fetchServerData() {
+  const d = await api("GET", "/api/data");
+  state.offline = false;
+  onCatalog(d.catalog);
+  onPurchases(d.purchases || []);
+}
+
+let ready;
+async function initStore() {
+  if (location.protocol.startsWith("http")) {
+    try { await fetchServerData(); state.mode = "server"; renderStatus(); return; }
+    catch (e) {
+      if (!(e instanceof TypeError) && !/404|405/.test(e.message)) {
+        state.mode = "server"; state.offline = true; toast("Couldn't load data: " + errMsg(e)); renderStatus(); return;
+      }
+    }
+  }
+  state.mode = "local";
+  const data = readLocal();
+  onCatalog(data.catalog);
+  onPurchases(data.purchases);
+  renderStatus();
+}
+function readLocal() {
+  try { const d = JSON.parse(localStorage.getItem(LOCAL_KEY)); if (d) return { catalog: d.catalog || {}, purchases: d.purchases || [] }; } catch {}
+  return { catalog: {}, purchases: [] };
+}
+function writeLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ catalog: state.catalog, purchases: state.purchases })); }
+  catch { toast("This browser won't let the page save data; it will be lost on reload"); }
+}
+
+function onCatalog(c) {
+  const next = normalizeCatalog(c);
+  if (stable(next) === stable(state.catalog)) return;
+  state.catalog = next;
+  requestRender();
+}
+function onPurchases(list) {
+  const next = list.filter((p) => p && p.date && Array.isArray(p.lines)).map(normalizePurchase);
+  if (stable(next) === stable(state.purchases)) return;
+  state.purchases = next;
+  buildIndex();
+  requestRender();
+}
+function upsertLocalPurchase(id, body) {
+  const i = state.purchases.findIndex((p) => p.id === id);
+  if (i >= 0) state.purchases[i] = { ...body, id }; else state.purchases.push({ ...body, id });
+  buildIndex();
+}
+
+let catWriting = false, catDirty = false;
+async function saveCatalog() {
+  await ready;
+  if (state.mode === "local") { writeLocal(); return; }
+  if (catWriting) { catDirty = true; return; }
+  catWriting = true;
+  try { do { catDirty = false; await api("PUT", "/api/catalog", clone(state.catalog)); } while (catDirty); markOnline(); }
+  catch (e) { markOffline(); toast("Couldn't save: " + errMsg(e)); }
+  finally { catWriting = false; }
+}
+async function putPurchase(id, body) {
+  await ready;
+  if (state.mode === "server") {
+    try { await api("PUT", `/api/purchases/${id}`, body); markOnline(); }
+    catch (e) { markOffline(); throw e; }
+  }
+  upsertLocalPurchase(id, body);
+  if (state.mode === "local") writeLocal();
+}
+async function removePurchase(id) {
+  await ready;
+  if (state.mode === "server") {
+    try { await api("DELETE", `/api/purchases/${id}`); markOnline(); }
+    catch (e) { markOffline(); throw e; }
+  }
+  state.purchases = state.purchases.filter((p) => p.id !== id);
+  buildIndex();
+  if (state.mode === "local") writeLocal();
+}
+async function putPurchases(items) {   // items: [{ id, body }]
+  await ready;
+  if (state.mode === "server") {
+    try { await api("POST", "/api/purchases/batch", { purchases: items.map(({ id, body }) => ({ ...body, id })) }); markOnline(); }
+    catch (e) { markOffline(); throw e; }
+  }
+  items.forEach(({ id, body }) => upsertLocalPurchase(id, body));
+  if (state.mode === "local") writeLocal();
+}
+const purchaseBody = (p) => { const { id, ...body } = p; return clone(body); };
+function markOffline() { if (!state.offline) { state.offline = true; renderStatus(); } }
+function markOnline() { if (state.offline) { state.offline = false; renderStatus(); } }
+
+// Pick up changes made from another tab or device when you come back to this one.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.mode === "server") fetchServerData().then(markOnline).catch(markOffline);
+});
+
+/* ---------- Price references ---------- */
+const pairKey = (category, product) => norm(category) + "|" + norm(product);
+function buildIndex() {
+  const byPair = new Map(), byName = new Map();
+  const sorted = [...state.purchases].sort((a, b) => (a.date + (a.createdAt || "")).localeCompare(b.date + (b.createdAt || "")));
+  const push = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+  for (const p of sorted) for (const l of p.lines || []) {
+    if (l.price == null || l.estimated || !norm(l.product)) continue;
+    const rec = { price: Number(l.price), date: p.date };
+    push(byPair, pairKey(l.category, l.product), rec);
+    push(byName, norm(l.product), rec);
+  }
+  state.idx = { byPair, byName };
+}
+function history(category, product) {
+  return state.idx.byPair.get(pairKey(category, product)) || state.idx.byName.get(norm(product)) || null;
+}
+function findCatalogProduct(category, product) {
+  const ps = state.catalog.products;
+  return ps.find((p) => norm(p.name) === norm(product) && norm(catName(p.categoryId)) === norm(category))
+    || ps.find((p) => norm(p.name) === norm(product)) || null;
+}
+function priceRef(category, product) {
+  const list = norm(product) ? history(category, product) : null;
+  if (list && list.length) {
+    const last = list[list.length - 1], recent = list.slice(-5);
+    const avg = recent.reduce((s, r) => s + r.price, 0) / recent.length;
+    return { est: last.price, src: "history", last, avg, n: recent.length };
+  }
+  const cp = findCatalogProduct(category, product);
+  if (cp && cp.refPrice != null) return { est: cp.refPrice, src: "ref" };
+  return null;
+}
+function refText(r) {
+  if (!r) return "No price history";
+  if (r.src === "ref") return `Reference ${uprice(r.est)}`;
+  return `Last ${uprice(r.last.price)} (${shortDate(r.last.date)})` + (r.n > 1 ? `, avg of last ${r.n} ${uprice(r.avg)}` : "");
+}
+function histText(category, product) {
+  const r = priceRef(category, product);
+  return r && r.src === "history" ? refText(r) : "Not bought yet";
+}
+function categoryEstimate(cid) {
+  const prods = productsIn(cid);
+  let total = 0, missing = 0;
+  for (const p of prods) {
+    const r = priceRef(catName(p.categoryId), p.name);
+    if (r) total += (p.qty || 1) * r.est; else missing++;
+  }
+  return { count: prods.length, total, missing, priced: prods.length - missing };
+}
+function categoryEstHtml(cid) {
+  const s = categoryEstimate(cid);
+  if (!s.count) return "No products yet";
+  if (!s.priced) return "No prices yet, add reference prices";
+  return `All at usual qty ≈ <span class="num">${money(s.total)}</span>` + (s.missing ? ` (${plural(s.missing, "product")} without a price)` : "");
+}
+
+/* ---------- Rendering ---------- */
+let pendingRender = false;
+function requestRender() {
+  const a = document.activeElement;
+  if (a && view.contains(a) && a.matches("input:not([type=checkbox]), select")) { pendingRender = true; return; }
+  render();
+}
+view.addEventListener("focusout", () => setTimeout(() => {
+  const a = document.activeElement;
+  if (pendingRender && !(a && view.contains(a) && a.matches("input:not([type=checkbox]), select"))) render();
+}, 0));
+
+function renderStatus() {
+  const el = $("#status");
+  el.classList.toggle("bad", state.offline);
+  el.textContent = state.offline ? "Can't reach the local server, changes aren't being saved"
+    : state.mode === "server" ? "Saved on this computer in data/ledger.json"
+    : state.mode === "local" ? "Opened as a file: data is saved in this browser only"
+    : "Loading…";
+}
+function render() {
+  pendingRender = false;
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-current", b.dataset.view === state.view ? "page" : "false"));
+  renderStatus();
+  if (state.view === "new") renderNew();
+  else if (state.view === "history") renderHistory();
+  else renderCatalog();
+}
+
+/* ===== New purchase ===== */
+function suppliers() { return [...new Set(state.purchases.map((p) => (p.supplier || "").trim()).filter(Boolean))]; }
+function productNames() {
+  const s = new Set();
+  state.catalog.products.forEach((p) => p.name && s.add(p.name));
+  state.purchases.forEach((p) => p.lines.forEach((l) => l.product && s.add(l.product)));
+  return [...s];
+}
+const lineGroup = (l) => (l.free ? OTHER : (l.categoryId || NONE));
+const lineForProduct = (pid) => state.draft.lines.find((l) => l.productId === pid);
+
+function pickTabs() {
+  const tabs = state.catalog.categories.map((c) => ({ id: c.id, name: c.name }));
+  if (state.catalog.products.some((p) => !p.categoryId)) tabs.push({ id: NONE, name: "Uncategorized" });
+  return tabs;
+}
+function ensurePickCat() {
+  const ids = pickTabs().map((t) => t.id);
+  const hasOther = state.draft.lines.some((l) => l.free);
+  if (state.pickCat === OTHER && hasOther) return;
+  if (ids.includes(state.pickCat)) return;
+  state.pickCat = ids[0] || (hasOther ? OTHER : null);
+}
+
+function renderNew() {
+  ensurePickCat();
+  const d = state.draft, tabs = pickTabs();
+  const counts = new Map();
+  d.lines.forEach((l) => counts.set(lineGroup(l), (counts.get(lineGroup(l)) || 0) + 1));
+  const badge = (id) => counts.get(id) ? `<span class="count">${counts.get(id)}</span>` : "";
+  const freeN = counts.get(OTHER) || 0;
+
+  view.innerHTML = `
+    ${d.editingId ? `<div class="banner"><span>Editing the purchase from ${esc(dateLabel(d.date, false))}</span><button class="link" data-act="cancel-edit">Discard changes</button></div>` : ""}
+    <section class="card">
+      <div class="fields">
+        <label class="field"><span>Date</span><input type="date" data-d="date" value="${esc(d.date)}"></label>
+        <label class="field"><span>Supplier</span><input data-d="supplier" list="dl-suppliers" value="${esc(d.supplier)}" placeholder="Optional"></label>
+        <label class="field"><span>Payment</span><select id="d-pay">
+          <option value="none" ${d.payMode === "none" ? "selected" : ""}>Not paid yet</option>
+          <option value="all" ${d.payMode === "all" ? "selected" : ""}>All paid</option>
+          <option value="some" ${d.payMode === "some" ? "selected" : ""}>Some items paid</option>
+        </select></label>
+        <label class="field ${d.payMode === "none" ? "invis" : ""}"><span>Paid on</span><input type="date" data-d="paidDate" value="${esc(d.paidDate)}"></label>
+        <label class="field"><span>Delivery</span><select id="d-del">
+          ${d.delMixed ? `<option value="keep" ${d.delMode === "keep" ? "selected" : ""}>Keep each item's status</option>` : ""}
+          <option value="ordered" ${d.delMode === "ordered" ? "selected" : ""}>Ordered</option>
+          <option value="shipping" ${d.delMode === "shipping" ? "selected" : ""}>On the way</option>
+          <option value="delivered" ${d.delMode === "delivered" ? "selected" : ""}>Delivered</option>
+        </select></label>
+        <label class="field ${d.delMode === "shipping" || d.delMode === "delivered" ? "" : "invis"}"><span>${d.delMode === "delivered" ? "Delivered on" : "Estimated delivery"}</span><input type="date" data-d="delDate" value="${esc(d.delDate)}"></label>
+        <label class="field note"><span>Note</span><input data-d="note" value="${esc(d.note)}" placeholder="Optional"></label>
+      </div>
+      <datalist id="dl-suppliers">${suppliers().map((s) => `<option value="${esc(s)}">`).join("")}</datalist>
+      <datalist id="dl-products">${productNames().map((s) => `<option value="${esc(s)}">`).join("")}</datalist>
+    </section>
+
+    <section class="card">
+      <h2>What did you buy?</h2>
+      ${tabs.length ? `
+        <div class="chips" role="group" aria-label="Category">
+          ${tabs.map((t) => `<button class="chip" data-act="pickcat" data-cid="${esc(t.id)}" aria-pressed="${t.id === state.pickCat}">${esc(t.name)}${badge(t.id)}</button>`).join("")}
+          ${freeN ? `<button class="chip" data-act="pickcat" data-cid="${OTHER}" aria-pressed="${state.pickCat === OTHER}">Other items${badge(OTHER)}</button>`
+                  : `<button class="chip ghost" data-act="add-free">+ Other item</button>`}
+        </div>`
+      : `<p class="hint">No categories yet. Set up categories and their products under Categories &amp; products. Then you can pick a category here and tick what you bought.</p>
+         <div class="chips"><button class="chip" data-act="goto" data-view="catalog">Set up categories</button>
+         ${freeN ? `<button class="chip" data-act="pickcat" data-cid="${OTHER}" aria-pressed="${state.pickCat === OTHER}">Other items${badge(OTHER)}</button>` : `<button class="chip ghost" data-act="add-free">+ Add an item directly</button>`}</div>`}
+      ${state.pickCat === OTHER ? otherHtml() : state.pickCat ? checklistHtml(state.pickCat) : ""}
+    </section>
+
+    ${d.lines.length ? summaryHtml() : ""}
+    <div class="totalbar" id="totalbar"></div>`;
+  updateTotals();
+}
+
+function lineHead(first) {
+  return `<div class="line head"><div>${first}</div><div>Qty</div><div>Unit price</div><div>Subtotal</div><div></div></div>`;
+}
+function qtyPriceCells(l, unitEditable) {
+  const unit = unitEditable
+    ? `<input class="unit-input" data-l="${esc(l.id)}" data-f="unit" value="${esc(l.unit)}" placeholder="Unit" aria-label="Unit">`
+    : `<span class="unit">${esc(l.unit)}</span>`;
+  return `
+    <div class="c-qty"><input type="number" inputmode="decimal" min="0" step="any" data-l="${esc(l.id)}" data-f="qty" value="${esc(l.qty)}" aria-label="Quantity">${unit}</div>
+    <div class="c-price"><span class="cur">${esc(CURRENCY)}</span><input type="number" inputmode="decimal" min="0" step="any" data-l="${esc(l.id)}" data-f="price"
+      value="${l.price ?? ""}" placeholder="${l.est != null ? "≈ " + num(l.est) : "Price"}" class="${l.est != null ? "has-est" : ""}" aria-label="Unit price"></div>
+    <div class="c-sub num" data-sub="${esc(l.id)}"></div>`;
+}
+
+function checklistHtml(cid) {
+  const prods = productsIn(cid);
+  const name = cid === NONE ? "Uncategorized" : catName(cid);
+  if (!prods.length) {
+    return `<div class="picker"><div class="picker-head"><strong>${esc(name)}</strong><span class="muted">No products in this category yet</span>
+      <button class="btn small" data-act="goto" data-view="catalog">Add products</button></div></div>`;
+  }
+  const picked = prods.filter((p) => lineForProduct(p.id)).length;
+  return `<div class="picker">
+    <div class="picker-head">
+      <strong>${esc(name)}</strong>
+      <span class="muted">${plural(prods.length, "product")}, ${picked} ticked</span>
+      <button class="btn small ghost" data-act="tick-all" data-cid="${esc(cid)}">Tick all</button>
+      ${picked ? `<button class="btn small ghost" data-act="untick-all" data-cid="${esc(cid)}">Untick all</button>` : ""}
+    </div>
+    <div class="picker-body">
+      ${lineHead("Product")}
+      ${prods.map((p) => {
+        const l = lineForProduct(p.id);
+        const ref = refText(priceRef(catName(p.categoryId), p.name));
+        return `<div class="line crow ${l ? "on" : ""}">
+          <div class="c-name">
+            <label class="ck"><input type="checkbox" data-tick="${esc(p.id)}" ${l ? "checked" : ""}><span class="ck-name">${esc(p.name)}</span></label>
+            <div class="ref">${esc(ref)}</div>
+          </div>
+          ${l ? qtyPriceCells(l, false) + `<div class="spacer"></div>` : ""}
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+function otherHtml() {
+  const lines = state.draft.lines.filter((l) => l.free);
+  return `<div class="picker">
+    <div class="picker-head">
+      <strong>Other items</strong>
+      <span class="muted">Things that aren't in your product list</span>
+      <button class="btn small" data-act="add-free">+ Add item</button>
+    </div>
+    <div class="picker-body">
+      ${lines.length ? lineHead("Item") + lines.map((l) => `<div class="line">
+        <div class="c-name">
+          <input data-l="${esc(l.id)}" data-f="product" value="${esc(l.product)}" placeholder="Item name" list="dl-products" aria-label="Item name">
+          <div class="ref" data-ref="${esc(l.id)}">${esc(refText(priceRef(l.category, l.product)))}</div>
+        </div>
+        ${qtyPriceCells(l, true)}
+        <button class="x" data-act="rm-line" data-id="${esc(l.id)}" aria-label="Remove">×</button>
+      </div>`).join("") : `<p class="hint">No other items.</p>`}
+    </div>
+  </div>`;
+}
+
+function summaryHtml() {
+  const groups = new Map();
+  state.draft.lines.forEach((l) => { const g = lineGroup(l); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(l); });
+  const label = (g, ls) => g === OTHER ? "Other items" : g === NONE ? "Uncategorized" : (catName(g) || ls[0].category || "Category");
+  const some = state.draft.payMode === "some";
+  const nameCell = (l) => {
+    const name = `<span data-sname="${esc(l.id)}">${esc(l.product || "Unnamed item")}</span>`;
+    if (!some) return name;
+    const was = state.draft.keepLineDates && l.paid && l.paidDate ? ` <small>paid ${esc(shortDate(l.paidDate))}</small>` : "";
+    return `<label class="ck"><input type="checkbox" data-paidline="${esc(l.id)}" ${l.paid ? "checked" : ""} aria-label="Paid">${name}${was}</label>`;
+  };
+  return `<section class="card">
+    <h2>This purchase</h2>
+    ${some ? `<p class="hint">Tick the items you've paid for.${state.draft.keepLineDates ? " Items paid earlier keep their own dates." : ""} <button class="link" data-act="paid-lines" data-on="1">Tick all</button> <button class="link" data-act="paid-lines" data-on="">Untick all</button></p>` : ""}
+    ${[...groups].map(([g, ls]) => `<div class="sgroup">
+      <button class="link sg-title" data-act="pickcat" data-cid="${esc(g)}">${esc(label(g, ls))}</button>
+      ${ls.map((l) => `<div class="srow">
+        ${nameCell(l)}
+        <span class="qp num" data-qp="${esc(l.id)}"></span>
+        <span class="num" data-sub="${esc(l.id)}"></span>
+        <button class="x" data-act="rm-line" data-id="${esc(l.id)}" aria-label="Remove">×</button>
+      </div>`).join("")}
+    </div>`).join("")}
+  </section>`;
+}
+
+function lineValue(l) {
+  const q = toNum(l.qty) ?? 0, p = l.price ?? l.est;
+  return p == null ? null : q * p;
+}
+function updateTotals() {
+  const bar = $("#totalbar");
+  if (!bar) return;
+  const lines = state.draft.lines;
+  let total = 0, estN = 0, unknown = 0;
+  for (const l of lines) {
+    const v = lineValue(l), isEst = l.price == null && v != null;
+    view.querySelectorAll(sel("data-sub", l.id)).forEach((el) => {
+      el.textContent = v == null ? "—" : (isEst ? "≈ " : "") + money(v);
+      el.classList.toggle("est", isEst);
+    });
+    view.querySelectorAll(sel("data-qp", l.id)).forEach((el) => {
+      const p = l.price ?? l.est;
+      el.textContent = `${qtyUnit(l.qty, l.unit)} × ${p == null ? "no price" : (l.price == null ? "≈ " : "") + uprice(p)}`;
+    });
+    view.querySelectorAll(sel("data-sname", l.id)).forEach((el) => { el.textContent = l.product || "Unnamed item"; });
+    if (v == null) { unknown++; continue; }
+    total += v; if (isEst) estN++;
+  }
+  const mode = state.draft.payMode;
+  let payNote = "";
+  if (lines.length && mode === "all") payNote = "all paid";
+  if (lines.length && mode === "some") {
+    const paidNow = lines.filter((l) => l.paid).reduce((s, l) => s + (lineValue(l) || 0), 0);
+    payNote = `${money(paidNow)} paid, ${money(total - paidNow)} unpaid`;
+  }
+  const parts = [lines.length ? plural(lines.length, "item") : "", estN ? `${estN} estimated from past prices` : "", unknown ? `${unknown} without a price` : "", payNote];
+  bar.innerHTML = `
+    <div class="tot">
+      <span class="tot-label">${estN ? "About" : "Total"}</span>
+      <span class="tot-num ${estN ? "est" : ""}">${money(total)}</span>
+      <span class="tot-note">${parts.filter(Boolean).join(", ")}</span>
+    </div>
+    <div class="tot-actions">
+      ${lines.length ? `<button class="btn ghost" data-act="clear-draft">Clear</button>` : ""}
+      <button class="btn primary" data-act="save" ${lines.length ? "" : "disabled"}>${state.draft.editingId ? "Save changes" : "Save purchase"}</button>
+    </div>`;
+}
+
+function tickProduct(p, on) {
+  const existing = lineForProduct(p.id);
+  if (on && !existing) {
+    const cname = catName(p.categoryId);
+    const r = priceRef(cname, p.name);
+    state.draft.lines.push({ id: newId(), productId: p.id, categoryId: p.categoryId, category: cname, product: p.name, unit: p.unit, qty: String(p.qty || 1), price: null, est: r ? r.est : null, free: false });
+  } else if (!on && existing) {
+    state.draft.lines = state.draft.lines.filter((l) => l !== existing);
+  }
+}
+
+async function saveDraftPurchase(btn) {
+  const d = state.draft;
+  const lines = d.lines.map((l) => {
+    const p = l.productId ? state.catalog.products.find((x) => x.id === l.productId) : null;
+    const name = (p ? p.name : l.product || "").trim();
+    const category = p ? catName(p.categoryId) : (l.category || "");
+    const price = l.price ?? l.est ?? null;
+    const paid = d.payMode === "all" || (d.payMode === "some" && !!l.paid);
+    const paidDate = !paid ? null : (d.keepLineDates && l.paidDate ? l.paidDate : (d.paidDate || todayStr()));
+    let del;
+    if (d.delMode === "keep" && l.delivery) del = { delivery: l.delivery, eta: l.eta || null, deliveredDate: l.deliveredDate || null };
+    else if (d.delMode === "shipping") del = { delivery: "shipping", eta: d.delDate || null, deliveredDate: null };
+    else if (d.delMode === "delivered") del = { delivery: "delivered", eta: null, deliveredDate: d.delDate || todayStr() };
+    else del = { delivery: "ordered", eta: null, deliveredDate: null };
+    return { category, product: name, qty: toNum(l.qty) ?? 0, unit: (l.unit || "").trim(), price, estimated: l.price == null && price != null, paid, paidDate, ...del };
+  }).filter((l) => l.product);
+  if (!lines.length) { toast("Tick a product or enter an item name first"); return; }
+  if (!d.date) { toast("Choose a date"); return; }
+  const total = lines.reduce((s, l) => s + (l.price == null ? 0 : l.qty * l.price), 0);
+  const now = new Date().toISOString();
+  const body = {
+    date: d.date, supplier: d.supplier.trim(), note: d.note.trim(), lines, total,
+    createdAt: d.createdAt || now, updatedAt: now,
+  };
+  const editing = !!d.editingId;
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    await putPurchase(d.editingId || newId(), body);
+    state.draft = newDraft(); saveDraft();
+    render();
+    toast(editing ? "Changes saved" : `Saved purchase for ${dateLabel(body.date, false)}, total ${money(total)}`);
+  } catch (e) {
+    toast("Save failed: " + errMsg(e));
+    if (btn) { btn.disabled = false; btn.textContent = editing ? "Save changes" : "Save purchase"; }
+  }
+}
+
+function deliveryDraft(p, asNew) {
+  if (asNew) return { delMode: "ordered", delDate: "", delMixed: false };
+  const st = new Set(p.lines.map((l) => l.delivery));
+  if (st.size === 1) {
+    const only = [...st][0];
+    if (only === "ordered") return { delMode: "ordered", delDate: "", delMixed: false };
+    const dates = new Set(p.lines.map((l) => (only === "shipping" ? l.eta : l.deliveredDate) || ""));
+    if (dates.size === 1) return { delMode: only, delDate: [...dates][0], delMixed: false };
+  }
+  return { delMode: "keep", delDate: "", delMixed: true };
+}
+function loadIntoDraft(p, asNew) {
+  if (state.draft.lines.length && !confirm("This will replace what you're currently entering. Continue?")) return;
+  const used = new Set();
+  const info = payInfo(p);
+  const paidDates = new Set(p.lines.filter((l) => l.paid && l.paidDate).map((l) => l.paidDate));
+  state.draft = {
+    editingId: asNew ? null : p.id, createdAt: asNew ? null : p.createdAt || null,
+    date: asNew ? todayStr() : p.date, supplier: p.supplier || "", note: asNew ? "" : p.note || "",
+    payMode: asNew ? "none" : info.status === "paid" ? "all" : info.status === "partly" ? "some" : "none",
+    paidDate: !asNew && paidDates.size === 1 ? [...paidDates][0] : todayStr(),
+    keepLineDates: !asNew && paidDates.size > 1,
+    ...deliveryDraft(p, asNew),
+    lines: p.lines.map((l) => {
+      let prod = findCatalogProduct(l.category, l.product);
+      if (prod && used.has(prod.id)) prod = null;
+      if (prod) used.add(prod.id);
+      const base = {
+        id: newId(), productId: prod ? prod.id : null, categoryId: prod ? prod.categoryId : null,
+        category: prod ? catName(prod.categoryId) : (l.category || ""), product: prod ? prod.name : l.product,
+        unit: l.unit || (prod ? prod.unit : ""), free: !prod,
+      };
+      if (asNew) {
+        const r = priceRef(base.category, base.product);
+        return { ...base, qty: String(l.qty ?? 1), price: null, est: r ? r.est : (l.price ?? null) };
+      }
+      return { ...base, qty: String(l.qty ?? ""), price: l.estimated ? null : (l.price ?? null), est: l.estimated ? l.price : null, paid: !!l.paid, paidDate: l.paidDate || null,
+        delivery: l.delivery, eta: l.eta || null, deliveredDate: l.deliveredDate || null };
+    }),
+  };
+  saveDraft();
+  state.view = "new";
+  state.pickCat = state.draft.lines[0] ? lineGroup(state.draft.lines[0]) : null;
+  render(); window.scrollTo(0, 0);
+}
+
+/* ===== History ===== */
+function filteredPurchases() {
+  const q = state.histQuery;
+  return state.purchases.filter((p) => {
+    if (state.histMonth !== "all" && !p.date.startsWith(state.histMonth)) return false;
+    if (state.histDelivery !== "all") {
+      const di = delInfo(p), hd = state.histDelivery;
+      if (hd === "open" && di.status === "delivered") return false;
+      if (hd === "shipping" && !di.sh) return false;
+      if (hd === "late" && !di.late) return false;
+      if (hd === "delivered" && di.status !== "delivered") return false;
+    }
+    if (state.histStatus !== "all") {
+      const st = payInfo(p).status;
+      if (state.histStatus === "paid" && st !== "paid") return false;
+      if (state.histStatus === "unpaid" && st === "paid") return false;
+    }
+    if (!q) return true;
+    const hay = [p.supplier, p.note, ...p.lines.flatMap((l) => [l.category, l.product])].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+}
+function renderHistory() {
+  const months = [...new Set(state.purchases.map((p) => p.date.slice(0, 7)))].sort().reverse();
+  if (state.histMonth !== "all" && !months.includes(state.histMonth)) state.histMonth = "all";
+  view.innerHTML = `
+    <div class="hist-tools">
+      <div class="seg" role="group" aria-label="Group by">
+        <button data-act="group" data-g="date" aria-pressed="${state.histGroup === "date"}">By date</button>
+        <button data-act="group" data-g="product" aria-pressed="${state.histGroup === "product"}">By product</button>
+        <button data-act="group" data-g="supplier" aria-pressed="${state.histGroup === "supplier"}">By supplier</button>
+      </div>
+      <select id="hist-month" aria-label="Month">
+        <option value="all">All months</option>
+        ${months.map((m) => `<option value="${m}" ${m === state.histMonth ? "selected" : ""}>${monthLabel(m)}</option>`).join("")}
+      </select>
+      <select id="hist-status" aria-label="Payment status">
+        <option value="all" ${state.histStatus === "all" ? "selected" : ""}>Paid and unpaid</option>
+        <option value="unpaid" ${state.histStatus === "unpaid" ? "selected" : ""}>With unpaid items</option>
+        <option value="paid" ${state.histStatus === "paid" ? "selected" : ""}>Fully paid</option>
+      </select>
+      <select id="hist-delivery" aria-label="Delivery status">
+        ${[["all", "Any delivery status"], ["open", "Not delivered yet"], ["shipping", "On the way"], ["late", "Late"], ["delivered", "Fully delivered"]]
+          .map(([v, t]) => `<option value="${v}" ${state.histDelivery === v ? "selected" : ""}>${t}</option>`).join("")}
+      </select>
+      <input id="hist-q" type="search" placeholder="Search products, categories, suppliers" value="${esc(state.histQuery)}">
+      <details class="menu" id="export-menu">
+        <summary class="btn">Export CSV</summary>
+        <div class="menu-pop">
+          <button data-act="export" data-kind="lines">Everything, one row per product<small>All purchases with every product line, price, payment and delivery status</small></button>
+          <button data-act="export" data-kind="purchases">Everything, one row per purchase<small>Totals and payment status, handy for accounts</small></button>
+          <button data-act="export" data-kind="shown">Only what's shown now<small>Uses the filters above</small></button>
+          <button data-act="export" data-kind="catalog">Categories and products<small>Your product list with reference and past prices</small></button>
+          <label class="menu-opt"><input type="checkbox" id="csv-semi" ${csvSemi() ? "checked" : ""}><span>Use semicolons and decimal commas (for Excel set to a European language)</span></label>
+        </div>
+      </details>
+    </div>
+    <div id="hist-list"></div>`;
+  renderHistList();
+}
+function renderHistList() {
+  const box = $("#hist-list");
+  if (!box) return;
+  if (!state.purchases.length) {
+    box.innerHTML = `<div class="empty">No purchases yet. <button class="link" data-act="goto" data-view="new">Record your first one</button></div>`;
+    return;
+  }
+  const list = filteredPurchases();
+  if (!list.length) { box.innerHTML = `<div class="empty">No matching purchases.</div>`; return; }
+  const sum = (ps) => ps.reduce((s, p) => s + (p.total || 0), 0);
+  const infos = list.map(payInfo);
+  const paidSum = infos.reduce((s, i) => s + i.paid, 0), unpaidSum = infos.reduce((s, i) => s + i.unpaid, 0);
+  const withUnpaid = infos.filter((i) => i.status !== "paid").length;
+  const hasEst = list.some((p) => p.lines.some((l) => l.estimated));
+  const scope = state.histMonth === "all" ? "All time" : monthLabel(state.histMonth);
+  const figures = `<div class="figures">
+    <div><span class="fig-label">Total</span><span class="fig">${money(sum(list))}</span><span class="fig-sub">${plural(list.length, "purchase")}</span></div>
+    <div><span class="fig-label">Paid</span><span class="fig">${money(paidSum)}</span><span class="fig-sub">${plural(list.length - withUnpaid, "purchase")} fully paid</span></div>
+    <div><span class="fig-label">Unpaid</span><span class="fig ${unpaidSum > 0 || withUnpaid ? "due" : ""}">${money(unpaidSum)}</span><span class="fig-sub">in ${plural(withUnpaid, "purchase")}</span></div>
+    ${withUnpaid > 1 ? `<button class="btn small" data-act="pay-all">Mark everything unpaid here as paid</button>` : ""}
+  </div>`;
+  const statusLabel = [{ unpaid: "with unpaid items", paid: "fully paid" }[state.histStatus],
+    { open: "not delivered yet", shipping: "on the way", late: "late", delivered: "fully delivered" }[state.histDelivery]].filter(Boolean).join(", ");
+  let shipN = 0, orderedN = 0, lateN = 0, nextEta = null, openP = 0;
+  list.forEach((p) => {
+    if (delInfo(p).status !== "delivered") openP++;
+    p.lines.forEach((l) => {
+      if (l.delivery === "shipping") { shipN++; if (lineLate(l)) lateN++; else if (l.eta && (!nextEta || l.eta < nextEta)) nextEta = l.eta; }
+      else if (l.delivery !== "delivered") orderedN++;
+    });
+  });
+  const delBits = [
+    shipN ? `${plural(shipN, "item")} on the way${nextEta ? ` (next ETA ${shortDate(nextEta)})` : ""}` : "",
+    lateN ? `<span class="due">${lateN} late</span>` : "",
+    orderedN ? `${plural(orderedN, "item")} ordered, not shipped yet` : "",
+  ].filter(Boolean);
+  const bulkDel = state.histDelivery !== "all" && openP ? ` <button class="link" data-act="del-all-delivered">Mark everything shown as delivered today</button>` : "";
+  const note = `<p class="summary">${scope}${statusLabel ? `, ${statusLabel}` : ""}${hasEst ? ". Some prices are estimates (shown with ≈)" : ""}</p>`
+    + (delBits.length || bulkDel ? `<p class="summary">Deliveries: ${delBits.join(", ") || "everything shown is delivered"}.${bulkDel}</p>` : "");
+  const body = state.histGroup === "date" ? byDateHtml(list) : state.histGroup === "product" ? byProductHtml(list) : bySupplierHtml(list);
+  box.innerHTML = figures + note + body;
+}
+const itemCell = (category, product) => `${category ? `<small>${esc(category)}</small> ` : ""}${esc(product)}`;
+function byDateHtml(list) {
+  const days = new Map();
+  [...list].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || "").localeCompare(a.createdAt || ""))
+    .forEach((p) => { if (!days.has(p.date)) days.set(p.date, []); days.get(p.date).push(p); });
+  return [...days].map(([date, ps]) => `
+    <section class="day">
+      <div class="day-head"><h3>${esc(dateLabel(date))}</h3><span class="num">${money(ps.reduce((s, p) => s + (p.total || 0), 0))}</span></div>
+      ${ps.map((p) => entryHtml(p, ps.length > 1)).join("")}
+    </section>`).join("");
+}
+function payPill(p) {
+  const i = payInfo(p);
+  if (i.status === "paid") return `<span class="pill paid">${i.oneDate ? `Paid ${esc(shortDate(i.oneDate))}` : "Paid"}</span>`;
+  if (i.status === "partly") return `<span class="pill unpaid">Partly paid: ${money(i.unpaid)} open</span>`;
+  return `<span class="pill unpaid">Unpaid</span>`;
+}
+function entryHtml(p, showTotal) {
+  const paying = state.payOpen === p.id, deling = state.delOpen === p.id;
+  const st = payInfo(p).status;
+  return `<article class="entry ${paying || deling ? "paying" : ""} ${deling ? "del-editing" : ""}">
+        <div class="entry-head">
+          <div class="who"><strong>${esc(p.supplier || "No supplier")}</strong>${p.note ? ` <span class="muted">${esc(p.note)}</span>` : ""}</div>
+          ${payPill(p)} ${delPill(p)}
+          ${showTotal ? `<span class="num">${money(p.total)}</span>` : ""}
+          <div class="entry-actions">
+            <button class="link" data-act="again" data-id="${esc(p.id)}">Buy again</button>
+            <button class="link" data-act="edit" data-id="${esc(p.id)}">Edit</button>
+            <button class="link danger" data-act="del" data-id="${esc(p.id)}">Delete</button>
+          </div>
+        </div>
+        <div class="scroll"><table>
+          <thead><tr><th>Product</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Subtotal</th><th>Payment</th><th>Delivery</th></tr></thead>
+          <tbody>${p.lines.map((l, i) => {
+            const sub = l.price == null ? null : (l.qty || 0) * l.price;
+            const cls = l.estimated ? "r num est" : "r num";
+            let status = l.paid ? `<span class="paid-txt">Paid${l.paidDate ? " " + esc(shortDate(l.paidDate)) : ""}</span>` : `<span class="due">Unpaid</span>`;
+            if (paying && !!state.payDraft[i] !== !!l.paid) status = state.payDraft[i] ? `<span class="paid-txt"><b>Paid</b> on save</span>` : `<span class="due"><b>Unpaid</b> on save</span>`;
+            const pay = paying
+              ? `<label class="ck"><input type="checkbox" data-payidx="${i}" ${state.payDraft[i] ? "checked" : ""} aria-label="Paid">${status}</label>`
+              : status;
+            return `<tr>
+              <td>${itemCell(l.category, l.product)}</td>
+              <td class="r num">${esc(qtyUnit(l.qty, l.unit))}</td>
+              <td class="${cls}">${l.estimated ? "≈ " : ""}${uprice(l.price)}</td>
+              <td class="${cls}">${l.estimated ? "≈ " : ""}${money(sub)}</td>
+              <td class="pay">${pay}</td>
+              <td class="del">${deling ? delEditCell(i) : delText(l)}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table></div>
+        ${paying || deling ? "" : `<div class="entry-foot">
+          <button class="btn pay-btn" data-act="pay-open" data-id="${esc(p.id)}">${st === "paid" ? "Change payment" : "Record payment"}${st === "partly" ? `<span class="hint-txt">${money(payInfo(p).unpaid)} open</span>` : ""}</button>
+          <button class="btn ship-btn" data-act="del-open" data-id="${esc(p.id)}">Update delivery</button>
+        </div>`}
+        ${paying ? `<div class="paybar">
+          <label>Paid on <input type="date" id="pay-date" value="${esc(state.payDate)}"></label>
+          <button class="link" data-act="pay-tick" data-on="1">Tick all</button>
+          <button class="link" data-act="pay-tick" data-on="">Untick all</button>
+          <span class="grow"></span>
+          <button class="btn small ghost" data-act="pay-cancel">Cancel</button>
+          <button class="btn small pay-btn" data-act="pay-save" data-id="${esc(p.id)}">Save payment</button>
+        </div>` : ""}
+        ${deling ? `<div class="paybar">
+          <label>Set all to <select id="del-all">
+            <option value="">Choose…</option><option value="ordered">Ordered</option><option value="shipping">On the way</option><option value="delivered">Delivered</option>
+          </select></label>
+          ${state.delDraft.some((x) => x.delivery === "shipping") ? `<label>ETA for everything on the way <input type="date" id="del-all-eta"></label>` : ""}
+          <span class="grow"></span>
+          <button class="btn small ghost" data-act="del-cancel">Cancel</button>
+          <button class="btn small ship-btn" data-act="del-save" data-id="${esc(p.id)}">Save delivery</button>
+        </div>` : ""}
+      </article>`;
+}
+function delEditCell(i) {
+  const d = state.delDraft[i];
+  const opt = (v) => `<option value="${v}" ${d.delivery === v ? "selected" : ""}>${DEL_LABEL[v]}</option>`;
+  const date = d.delivery === "shipping"
+    ? `<span class="muted">ETA</span><input type="date" data-deleta="${i}" value="${esc(d.eta || "")}" aria-label="Estimated delivery">`
+    : d.delivery === "delivered"
+    ? `<span class="muted">on</span><input type="date" data-deldone="${i}" value="${esc(d.deliveredDate || "")}" aria-label="Delivered on">`
+    : "";
+  return `<div class="delcell"><select data-delidx="${i}" aria-label="Delivery status">${opt("ordered")}${opt("shipping")}${opt("delivered")}</select>${date}</div>`;
+}
+function byProductHtml(list) {
+  const agg = new Map();
+  for (const p of list) for (const l of p.lines) {
+    const k = pairKey(l.category, l.product);
+    if (!agg.has(k)) agg.set(k, { category: l.category, product: l.product, unit: l.unit, times: 0, qty: 0, spend: 0, prices: [], lastEst: null });
+    const a = agg.get(k);
+    a.times++; a.qty += Number(l.qty) || 0;
+    if (l.price != null) a.spend += (Number(l.qty) || 0) * l.price;
+    if (l.price != null && !l.estimated) a.prices.push({ price: l.price, date: p.date });
+    if (l.price != null && l.estimated && (!a.lastEst || p.date >= a.lastEst.date)) a.lastEst = { price: l.price, date: p.date };
+  }
+  const rows = [...agg.values()].sort((a, b) => b.spend - a.spend);
+  return `<div class="wide-table scroll"><table>
+    <thead><tr><th>Product</th><th class="r">Times</th><th class="r">Total qty</th><th class="r">Last price</th><th class="r">Avg price</th><th class="r">Low – high</th><th class="r">Total spent</th></tr></thead>
+    <tbody>${rows.map((a) => {
+      a.prices.sort((x, y) => x.date.localeCompare(y.date));
+      const ps = a.prices.map((x) => x.price);
+      const last = a.prices[a.prices.length - 1];
+      return `<tr>
+        <td>${itemCell(a.category, a.product)}</td>
+        <td class="r num">${a.times}</td>
+        <td class="r num">${esc(qtyUnit(a.qty, a.unit))}</td>
+        <td class="r num">${last ? `${uprice(last.price)} <small>${shortDate(last.date)}</small>` : a.lastEst ? `<span class="est">≈ ${uprice(a.lastEst.price)}</span> <small>${shortDate(a.lastEst.date)}</small>` : "—"}</td>
+        <td class="r num">${ps.length ? uprice(ps.reduce((s, x) => s + x, 0) / ps.length) : "—"}</td>
+        <td class="r num">${ps.length ? `${uprice(Math.min(...ps))} – ${uprice(Math.max(...ps))}` : "—"}</td>
+        <td class="r num">${money(a.spend)}</td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table></div>`;
+}
+function bySupplierHtml(list) {
+  const agg = new Map();
+  for (const p of list) {
+    const k = norm(p.supplier);
+    if (!agg.has(k)) agg.set(k, { name: p.supplier || "No supplier", n: 0, total: 0, paid: 0, unpaid: 0, unpaidN: 0, oldest: null });
+    const a = agg.get(k);
+    const i = payInfo(p);
+    a.n++; a.total += p.total || 0; a.paid += i.paid; a.unpaid += i.unpaid;
+    if (i.status !== "paid") { a.unpaidN++; if (!a.oldest || p.date < a.oldest) a.oldest = p.date; }
+  }
+  const rows = [...agg.values()].sort((a, b) => b.unpaid - a.unpaid || b.total - a.total);
+  return `<div class="wide-table scroll"><table>
+    <thead><tr><th>Supplier</th><th class="r">Purchases</th><th class="r">Total</th><th class="r">Paid</th><th class="r">Unpaid</th><th class="r">Oldest unpaid</th></tr></thead>
+    <tbody>${rows.map((a) => `<tr>
+      <td>${esc(a.name)}</td>
+      <td class="r num">${a.n}</td>
+      <td class="r num">${money(a.total)}</td>
+      <td class="r num">${money(a.paid)}</td>
+      <td class="r num ${a.unpaid ? "due" : ""}">${money(a.unpaid)}${a.unpaidN ? ` <small>(${a.unpaidN})</small>` : ""}</td>
+      <td class="r num">${a.oldest ? esc(shortDate(a.oldest)) : "—"}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+/* ===== CSV export ===== */
+const CSV_SEMI_KEY = "ledger:csvSemi";
+function csvSemi() { try { return localStorage.getItem(CSV_SEMI_KEY) === "1"; } catch { return false; } }
+function csvText(rows) {
+  const semi = csvSemi();
+  const cell = (v) => {
+    let t = typeof v === "number" ? String(Math.round(v * 10000) / 10000) : String(v ?? "");
+    if (typeof v === "number" && semi) t = t.replace(".", ",");
+    return `"${t.replace(/"/g, '""')}"`;
+  };
+  return "\uFEFF" + rows.map((r) => r.map(cell).join(semi ? ";" : ",")).join("\r\n");
+}
+function downloadCsv(name, rows) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csvText(rows)], { type: "text/csv;charset=utf-8" }));
+  a.download = `${name}-${todayStr()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const round2 = (n) => Math.round(n * 100) / 100;
+const payStatus = (p) => ({ paid: "Paid", partly: "Partly paid", unpaid: "Unpaid" }[payInfo(p).status]);
+const byDateAsc = (a, b) => a.date.localeCompare(b.date) || (a.createdAt || "").localeCompare(b.createdAt || "");
+function lineRows(list) {
+  const rows = [["Purchase ID", "Date", "Supplier", "Category", "Product", "Qty", "Unit", `Unit price (${CURRENCY_CODE})`, `Subtotal (${CURRENCY_CODE})`, "Price type", "Payment", "Paid on", "Delivery", "ETA", "Delivered on", "Note"]];
+  [...list].sort(byDateAsc).forEach((p) => p.lines.forEach((l) => rows.push([
+    p.id, p.date, p.supplier, l.category, l.product, Number(l.qty) || 0, l.unit, l.price ?? "",
+    l.price == null ? "" : round2((Number(l.qty) || 0) * l.price), l.price == null ? "None" : l.estimated ? "Estimate" : "Actual",
+    l.paid ? "Paid" : "Unpaid", l.paid ? l.paidDate || "" : "",
+    DEL_LABEL[l.delivery] || "Ordered", l.delivery === "shipping" ? l.eta || "" : "", l.delivery === "delivered" ? l.deliveredDate || "" : "", p.note,
+  ])));
+  return rows;
+}
+function exportCsv(kind) {
+  if (kind === "catalog") {
+    const { categories, products } = state.catalog;
+    if (!products.length && !categories.length) { toast("Your product list is empty"); return; }
+    const rows = [["Category", "Product", "Usual qty", "Unit", `Reference price (${CURRENCY_CODE})`, `Last price (${CURRENCY_CODE})`, "Last bought", `Avg of last 5 (${CURRENCY_CODE})`]];
+    const order = [...categories.map((c) => c.id), null];
+    order.forEach((cid) => products.filter((p) => (p.categoryId || null) === cid).forEach((p) => {
+      const cname = catName(p.categoryId), h = history(cname, p.name);
+      const last = h && h.length ? h[h.length - 1] : null, recent = h ? h.slice(-5) : [];
+      rows.push([cname || "Uncategorized", p.name, p.qty ?? 1, p.unit, p.refPrice ?? "", last ? last.price : "", last ? last.date : "",
+        recent.length ? round2(recent.reduce((s, r) => s + r.price, 0) / recent.length) : ""]);
+    }));
+    categories.filter((c) => !products.some((p) => p.categoryId === c.id)).forEach((c) => rows.push([c.name, "", "", "", "", "", "", ""]));
+    downloadCsv("products", rows);
+    return;
+  }
+  const list = kind === "shown" ? filteredPurchases() : state.purchases;
+  if (!list.length) { toast("Nothing to export"); return; }
+  if (kind === "purchases") {
+    const rows = [["Purchase ID", "Date", "Supplier", "Items", `Total (${CURRENCY_CODE})`, `Paid (${CURRENCY_CODE})`, `Unpaid (${CURRENCY_CODE})`, "Payment", "Last paid on", "Delivery", "Next ETA", "Includes estimates", "Note"]];
+    [...list].sort(byDateAsc).forEach((p) => {
+      const i = payInfo(p), di = delInfo(p);
+      rows.push([
+        p.id, p.date, p.supplier, p.lines.length, round2(p.total || 0), round2(i.paid), round2(i.unpaid),
+        payStatus(p), i.lastDate || "",
+        { delivered: "Delivered", partly: "Partly delivered", shipping: "On the way", ordered: "Ordered" }[di.status], di.nextEta || "",
+        p.lines.some((l) => l.estimated) ? "Yes" : "No", p.note,
+      ]);
+    });
+    downloadCsv("purchases-summary", rows);
+    return;
+  }
+  downloadCsv(kind === "shown" ? "purchases-filtered" : "purchases-all", lineRows(list));
+}
+
+/* ===== Categories & products ===== */
+function renderCatalog() {
+  const { categories } = state.catalog;
+  const uncategorized = productsIn(NONE);
+  view.innerHTML = `
+    <section class="card">
+      <h2>Add a category</h2>
+      <p class="hint">A category groups the products you buy for one thing, such as a machine, a project or a customer. When you record a purchase, you pick a category and tick the products you bought.</p>
+      <div class="addrow">
+        <input id="nc-name" placeholder="Category name, e.g. Small water pump" data-enter="add-category" aria-label="Category name">
+        <button class="btn primary" data-act="add-category">Add category</button>
+      </div>
+    </section>
+    ${categories.map((c) => categoryCardHtml(c.id)).join("")}
+    ${uncategorized.length ? categoryCardHtml(NONE) : ""}
+    ${!categories.length && !uncategorized.length ? `<div class="empty">No categories yet. Add one above, then add the products that belong to it.</div>` : ""}`;
+}
+function cell(label, input) { return `<label class="cell"><span class="mlabel">${label}</span>${input}</label>`; }
+function categorySelect(p) {
+  return `<select data-cat="category" data-prid="${esc(p.id)}" aria-label="Category">
+    ${state.catalog.categories.map((c) => `<option value="${esc(c.id)}" ${c.id === p.categoryId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
+    <option value="" ${p.categoryId ? "" : "selected"}>Uncategorized</option>
+  </select>`;
+}
+function categoryCardHtml(cid) {
+  const c = cid === NONE ? null : catById(cid);
+  const prods = productsIn(cid);
+  const cidAttr = esc(cid);
+  return `<section class="card">
+    <div class="product-head">
+      ${c ? `<input class="title-input" value="${esc(c.name)}" data-cat="cname" data-cid="${cidAttr}" aria-label="Category name">`
+          : `<h2>Uncategorized</h2>`}
+      <span class="set-est" data-catest="${cidAttr}">${categoryEstHtml(cid)}</span>
+      ${c ? `<button class="link danger" data-act="del-category" data-cid="${cidAttr}">Delete category</button>` : ""}
+    </div>
+    ${prods.length ? `<div class="prow head"><div>Product</div><div>Category</div><div>Usual qty</div><div>Unit</div><div>Ref. price</div><div>Past prices</div><div></div></div>` : ""}
+    ${prods.map((p) => {
+      const a = `data-prid="${esc(p.id)}"`;
+      return `<div class="prow">
+        ${cell("Product", `<input value="${esc(p.name)}" data-cat="name" ${a} aria-label="Product name">`)}
+        ${cell("Category", categorySelect(p))}
+        ${cell("Usual qty", `<input type="number" inputmode="decimal" min="0" step="any" value="${p.qty ?? 1}" data-cat="qty" ${a} aria-label="Usual quantity">`)}
+        ${cell("Unit", `<input value="${esc(p.unit)}" data-cat="unit" ${a} placeholder="pcs" aria-label="Unit">`)}
+        ${cell(`Reference price (${CURRENCY})`, `<input type="number" inputmode="decimal" min="0" step="any" value="${p.refPrice ?? ""}" data-cat="ref" ${a} placeholder="Optional" aria-label="Reference price">`)}
+        <div class="ref" data-pref="${esc(p.id)}">${esc(histText(catName(p.categoryId), p.name))}</div>
+        <button class="x" data-act="del-product" ${a} aria-label="Delete product">×</button>
+      </div>`;
+    }).join("")}
+    ${c ? `<div class="prow new">
+      ${cell("New product", `<input data-np="name" data-cid="${cidAttr}" data-enter="add-product" placeholder="New product name" aria-label="New product name">`)}
+      <div></div>
+      ${cell("Usual qty", `<input type="number" inputmode="decimal" min="0" step="any" data-np="qty" data-cid="${cidAttr}" data-enter="add-product" placeholder="1" aria-label="Usual quantity">`)}
+      ${cell("Unit", `<input data-np="unit" data-cid="${cidAttr}" data-enter="add-product" placeholder="pcs" aria-label="Unit">`)}
+      ${cell(`Reference price (${CURRENCY})`, `<input type="number" inputmode="decimal" min="0" step="any" data-np="ref" data-cid="${cidAttr}" data-enter="add-product" placeholder="Optional" aria-label="Reference price">`)}
+      <div></div>
+      <button class="btn small" data-act="add-product" data-cid="${cidAttr}">Add</button>
+    </div>` : ""}
+  </section>`;
+}
+function refreshCatalogTexts() {
+  view.querySelectorAll("[data-catest]").forEach((el) => { el.innerHTML = categoryEstHtml(el.dataset.catest); });
+  state.catalog.products.forEach((p) => {
+    const el = view.querySelector(sel("data-pref", p.id));
+    if (el) el.textContent = histText(catName(p.categoryId), p.name);
+  });
+}
+
+/* ---------- Interaction ---------- */
+function act(a, ds, el) {
+  const cat = state.catalog;
+  switch (a) {
+    case "goto": state.view = ds.view; render(); window.scrollTo(0, 0); break;
+    case "pickcat": state.pickCat = ds.cid; render(); break;
+    case "tick-all": case "untick-all": {
+      const prods = productsIn(ds.cid);
+      if (a === "untick-all" && prods.some((p) => { const l = lineForProduct(p.id); return l && l.price != null; })
+          && !confirm("Untick all products in this category? Prices you've typed in for them will be cleared.")) break;
+      prods.forEach((p) => tickProduct(p, a === "tick-all"));
+      saveDraft(); render();
+      break;
+    }
+    case "add-free": {
+      const id = newId();
+      state.draft.lines.push({ id, productId: null, categoryId: null, category: "", product: "", unit: "", qty: "1", price: null, est: null, free: true });
+      state.pickCat = OTHER;
+      saveDraft(); render();
+      const inp = view.querySelector(`input[data-l="${id}"][data-f="product"]`); if (inp) inp.focus();
+      break;
+    }
+    case "rm-line": state.draft.lines = state.draft.lines.filter((l) => l.id !== ds.id); saveDraft(); render(); break;
+    case "save": saveDraftPurchase(el); break;
+    case "clear-draft":
+      if (confirm("Clear the purchase you're entering?")) { state.draft = newDraft(); saveDraft(); render(); }
+      break;
+    case "cancel-edit": state.draft = newDraft(); saveDraft(); render(); break;
+
+    case "group": state.histGroup = ds.g; renderHistory(); break;
+    case "again": case "edit": {
+      const p = state.purchases.find((x) => x.id === ds.id);
+      if (p) loadIntoDraft(p, a === "again");
+      break;
+    }
+    case "del": {
+      const p = state.purchases.find((x) => x.id === ds.id);
+      if (p && confirm(`Delete the purchase from ${dateLabel(p.date, false)} (${p.supplier || "no supplier"})?`)) {
+        removePurchase(p.id).then(() => { render(); toast("Deleted"); }).catch((e) => toast("Delete failed: " + errMsg(e)));
+      }
+      break;
+    }
+    case "export": { const m = $("#export-menu"); if (m) m.open = false; exportCsv(ds.kind || "lines"); break; }
+    case "paid-lines":
+      state.draft.lines.forEach((l) => { l.paid = !!ds.on; });
+      saveDraft(); render();
+      break;
+    case "pay-open": {
+      const p = state.purchases.find((x) => x.id === ds.id);
+      if (!p) break;
+      state.payOpen = p.id; state.delOpen = null;
+      state.payDraft = p.lines.map((l) => !!l.paid);
+      state.payDate = todayStr();
+      renderHistList();
+      break;
+    }
+    case "del-open": {
+      const p = state.purchases.find((x) => x.id === ds.id);
+      if (!p) break;
+      state.delOpen = p.id; state.payOpen = null;
+      state.delDraft = p.lines.map((l) => ({ delivery: l.delivery, eta: l.eta || "", deliveredDate: l.deliveredDate || "" }));
+      renderHistList();
+      break;
+    }
+    case "del-cancel": state.delOpen = null; renderHistList(); break;
+    case "del-save": {
+      const p = state.purchases.find((x) => x.id === ds.id);
+      if (!p) break;
+      const body = purchaseBody(p);
+      let changed = 0;
+      body.lines = body.lines.map((l, i) => {
+        const d = state.delDraft[i];
+        const next = {
+          delivery: d.delivery,
+          eta: d.delivery === "shipping" ? (d.eta || null) : null,
+          deliveredDate: d.delivery === "delivered" ? (d.deliveredDate || todayStr()) : null,
+        };
+        if (next.delivery === l.delivery && next.eta === (l.eta || null) && next.deliveredDate === (l.deliveredDate || null)) return l;
+        changed++;
+        return { ...l, ...next };
+      });
+      if (!changed) { state.delOpen = null; renderHistList(); break; }
+      body.updatedAt = new Date().toISOString();
+      el.disabled = true;
+      putPurchases([{ id: p.id, body }])
+        .then(() => { state.delOpen = null; renderHistList(); toast("Delivery status saved"); })
+        .catch((e) => { el.disabled = false; toast("Couldn't save: " + errMsg(e)); });
+      break;
+    }
+    case "del-all-delivered": {
+      const targets = filteredPurchases().filter((p) => delInfo(p).status !== "delivered");
+      const n = targets.reduce((s, p) => s + p.lines.filter((l) => l.delivery !== "delivered").length, 0);
+      if (!targets.length || !confirm(`Mark ${plural(n, "item")} in ${plural(targets.length, "purchase")} as delivered today?`)) break;
+      const today = todayStr(), now = new Date().toISOString();
+      const items = targets.map((p) => {
+        const body = purchaseBody(p);
+        body.lines = body.lines.map((l) => (l.delivery === "delivered" ? l : { ...l, delivery: "delivered", eta: null, deliveredDate: today }));
+        body.updatedAt = now;
+        return { id: p.id, body };
+      });
+      putPurchases(items).then(() => { state.delOpen = null; renderHistList(); toast(`Marked ${plural(n, "item")} as delivered`); })
+        .catch((e) => toast("Couldn't update: " + errMsg(e)));
+      break;
+    }
+    case "pay-tick": state.payDraft = state.payDraft.map(() => !!ds.on); renderHistList(); break;
+    case "pay-cancel": state.payOpen = null; renderHistList(); break;
+    case "pay-save": {
+      const p = state.purchases.find((x) => x.id === ds.id);
+      if (!p) break;
+      const date = state.payDate || todayStr();
+      const body = purchaseBody(p);
+      let changed = 0;
+      body.lines = body.lines.map((l, i) => {
+        const want = !!state.payDraft[i];
+        if (want === !!l.paid) return l;
+        changed++;
+        return { ...l, paid: want, paidDate: want ? date : null };
+      });
+      if (!changed) { state.payOpen = null; renderHistList(); break; }
+      body.updatedAt = new Date().toISOString();
+      el.disabled = true;
+      putPurchases([{ id: p.id, body }])
+        .then(() => { state.payOpen = null; renderHistList(); toast(`Payment saved, ${money(payInfo({ lines: body.lines }).unpaid)} still open`); })
+        .catch((e) => { el.disabled = false; toast("Couldn't save: " + errMsg(e)); });
+      break;
+    }
+    case "pay-all": {
+      const targets = filteredPurchases().filter((p) => payInfo(p).status !== "paid");
+      const amount = targets.reduce((s, p) => s + payInfo(p).unpaid, 0);
+      if (!targets.length || !confirm(`Mark all unpaid items in ${plural(targets.length, "purchase")} (${money(amount)}) as paid today?`)) break;
+      const today = todayStr(), now = new Date().toISOString();
+      const items = targets.map((p) => {
+        const body = purchaseBody(p);
+        body.lines = body.lines.map((l) => (l.paid ? l : { ...l, paid: true, paidDate: today }));
+        body.updatedAt = now;
+        return { id: p.id, body };
+      });
+      putPurchases(items).then(() => { state.payOpen = null; renderHistList(); toast(`Marked ${money(amount)} as paid`); })
+        .catch((e) => toast("Couldn't update: " + errMsg(e)));
+      break;
+    }
+
+    case "add-category": {
+      const inp = $("#nc-name"), name = inp.value.trim();
+      if (!name) { toast("Enter a category name first"); inp.focus(); break; }
+      if (cat.categories.some((c) => norm(c.name) === norm(name))) { toast("That category already exists"); break; }
+      const id = newId();
+      cat.categories.push({ id, name });
+      saveCatalog(); render();
+      const first = view.querySelector(`[data-np="name"]${sel("data-cid", id)}`);
+      if (first) { first.scrollIntoView({ block: "center" }); first.focus(); }
+      break;
+    }
+    case "del-category": {
+      const c = catById(ds.cid);
+      if (!c) break;
+      const n = productsIn(c.id).length;
+      if (!confirm(`Delete the category ${c.name}?` + (n ? ` Its ${plural(n, "product")} will move to Uncategorized.` : "") + " Past purchases stay as they are.")) break;
+      cat.categories = cat.categories.filter((x) => x !== c);
+      cat.products.forEach((p) => { if (p.categoryId === c.id) p.categoryId = null; });
+      state.draft.lines.forEach((l) => { if (l.categoryId === c.id) l.categoryId = null; });
+      saveDraft(); saveCatalog(); render();
+      break;
+    }
+    case "add-product": {
+      const c = catById(ds.cid);
+      if (!c) break;
+      const get = (f) => view.querySelector(`[data-np="${f}"]${sel("data-cid", c.id)}`);
+      const name = get("name").value.trim();
+      if (!name) { toast("Enter a product name first"); get("name").focus(); break; }
+      if (productsIn(c.id).some((p) => norm(p.name) === norm(name))) { toast(`${c.name} already has that product`); break; }
+      cat.products.push({ id: newId(), name, categoryId: c.id, qty: toNum(get("qty").value) ?? 1, unit: get("unit").value.trim(), refPrice: toNum(get("ref").value) });
+      saveCatalog(); render();
+      const again = view.querySelector(`[data-np="name"]${sel("data-cid", c.id)}`);
+      if (again) again.focus();
+      break;
+    }
+    case "del-product": {
+      const p = cat.products.find((x) => x.id === ds.prid);
+      if (p && confirm(`Delete the product ${p.name}? Past purchases stay as they are.`)) {
+        cat.products = cat.products.filter((x) => x !== p);
+        saveCatalog(); render();
+      }
+      break;
+    }
+  }
+}
+
+// Keep the export menu on screen: open it to the left or right depending on where the button sits.
+document.addEventListener("toggle", (e) => {
+  const m = e.target;
+  if (!(m instanceof HTMLDetailsElement) || !m.open || !m.classList.contains("menu")) return;
+  const pop = m.querySelector(".menu-pop"), r = m.getBoundingClientRect();
+  const alignLeft = r.right - pop.offsetWidth < 8;
+  pop.style.left = alignLeft ? "0" : "auto";
+  pop.style.right = alignLeft ? "auto" : "0";
+}, true);
+document.addEventListener("click", (e) => {
+  const m = $("#export-menu");
+  if (m && m.open && !m.contains(e.target)) m.open = false;
+  const b = e.target.closest("[data-act]");
+  if (b && !b.disabled) act(b.dataset.act, b.dataset, b);
+});
+view.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.dataset && e.target.dataset.enter) { e.preventDefault(); act(e.target.dataset.enter, e.target.dataset, e.target); }
+});
+view.addEventListener("input", (e) => {
+  const t = e.target, ds = t.dataset;
+  if (ds.d) { state.draft[ds.d] = t.value; saveDraft(); return; }
+  if (ds.l) {
+    const l = state.draft.lines.find((x) => x.id === ds.l);
+    if (!l) return;
+    if (ds.f === "price") l.price = toNum(t.value); else l[ds.f] = t.value;
+    saveDraft(); updateTotals(); return;
+  }
+  if (t.id === "hist-q") { state.histQuery = t.value.trim().toLowerCase(); renderHistList(); }
+});
+view.addEventListener("change", (e) => {
+  const t = e.target, ds = t.dataset;
+
+  if (ds.tick) {
+    const p = state.catalog.products.find((x) => x.id === ds.tick);
+    if (!p) return;
+    tickProduct(p, t.checked);
+    saveDraft(); render();
+    if (t.checked) {
+      const l = lineForProduct(p.id);
+      const q = l && view.querySelector(`.picker input[data-l="${CSS.escape(l.id)}"][data-f="qty"]`);
+      if (q) { q.focus(); q.select(); }
+    }
+    return;
+  }
+
+  if (ds.l && ds.f === "product") {   // name of an "other item" changed: look up a price for it
+    const l = state.draft.lines.find((x) => x.id === ds.l);
+    if (!l) return;
+    const r = priceRef(l.category, l.product);
+    l.est = r ? r.est : null;
+    if (!l.unit) {
+      const cp = findCatalogProduct("", l.product);
+      if (cp && cp.unit) { l.unit = cp.unit; const u = view.querySelector(`input[data-l="${CSS.escape(l.id)}"][data-f="unit"]`); if (u) u.value = l.unit; }
+    }
+    saveDraft();
+    const refEl = view.querySelector(sel("data-ref", l.id)); if (refEl) refEl.textContent = refText(r);
+    const pin = view.querySelector(`input[data-l="${CSS.escape(l.id)}"][data-f="price"]`);
+    if (pin) { pin.placeholder = l.est != null ? "≈ " + num(l.est) : "Price"; pin.classList.toggle("has-est", l.est != null); }
+    updateTotals();
+    return;
+  }
+
+  if (t.id === "hist-month") { state.histMonth = t.value; renderHistList(); return; }
+  if (t.id === "hist-status") { state.histStatus = t.value; renderHistList(); return; }
+  if (t.id === "hist-delivery") { state.histDelivery = t.value; renderHistList(); return; }
+  if (t.id === "d-del") {
+    state.draft.delMode = t.value;
+    state.draft.delDate = t.value === "delivered" ? todayStr() : "";
+    saveDraft(); render();
+    return;
+  }
+  if (ds.delidx !== undefined) {
+    const d = state.delDraft[Number(ds.delidx)];
+    d.delivery = t.value;
+    if (t.value === "delivered" && !d.deliveredDate) d.deliveredDate = todayStr();
+    renderHistList();
+    return;
+  }
+  if (ds.deleta !== undefined) { state.delDraft[Number(ds.deleta)].eta = t.value; return; }
+  if (ds.deldone !== undefined) { state.delDraft[Number(ds.deldone)].deliveredDate = t.value; return; }
+  if (t.id === "del-all") {
+    if (!t.value) return;
+    state.delDraft.forEach((d) => { d.delivery = t.value; if (t.value === "delivered" && !d.deliveredDate) d.deliveredDate = todayStr(); });
+    renderHistList();
+    return;
+  }
+  if (t.id === "del-all-eta") {
+    state.delDraft.forEach((d) => { if (d.delivery === "shipping") d.eta = t.value; });
+    renderHistList();
+    return;
+  }
+  if (t.id === "csv-semi") { try { localStorage.setItem(CSV_SEMI_KEY, t.checked ? "1" : "0"); } catch {} return; }
+  if (t.id === "d-pay") {
+    state.draft.payMode = t.value;
+    if (!state.draft.paidDate) state.draft.paidDate = todayStr();
+    saveDraft(); render();
+    return;
+  }
+  if (ds.paidline) {
+    const l = state.draft.lines.find((x) => x.id === ds.paidline);
+    if (l) { l.paid = t.checked; saveDraft(); updateTotals(); }
+    return;
+  }
+  if (ds.payidx !== undefined) { state.payDraft[Number(ds.payidx)] = t.checked; renderHistList(); return; }
+  if (t.id === "pay-date") { state.payDate = t.value; return; }
+
+  if (ds.cat === "cname") {
+    const c = catById(ds.cid);
+    if (!c) return;
+    const v = t.value.trim();
+    if (!v || state.catalog.categories.some((x) => x !== c && norm(x.name) === norm(v))) { t.value = c.name; if (v) toast("That category already exists"); return; }
+    c.name = v;
+    state.draft.lines.forEach((l) => { if (l.categoryId === c.id) l.category = v; });
+    saveDraft(); saveCatalog(); refreshCatalogTexts();
+    return;
+  }
+  if (ds.cat) {
+    const p = state.catalog.products.find((x) => x.id === ds.prid);
+    if (!p) return;
+    if (ds.cat === "category") {
+      p.categoryId = t.value || null;
+      state.draft.lines.forEach((l) => { if (l.productId === p.id) { l.categoryId = p.categoryId; l.category = catName(p.categoryId); } });
+      saveDraft(); saveCatalog(); render();
+      toast(`Moved ${p.name} to ${p.categoryId ? catName(p.categoryId) : "Uncategorized"}`);
+      return;
+    }
+    if (ds.cat === "name") { const v = t.value.trim(); if (!v) { t.value = p.name; return; } p.name = v; state.draft.lines.forEach((l) => { if (l.productId === p.id) l.product = v; }); saveDraft(); }
+    else if (ds.cat === "unit") p.unit = t.value.trim();
+    else if (ds.cat === "qty") p.qty = toNum(t.value) ?? 1;
+    else if (ds.cat === "ref") p.refPrice = toNum(t.value);
+    saveCatalog();
+    refreshCatalogTexts();
+  }
+});
+
+render();
+ready = initStore();
+</script>
+</body>
+</html>

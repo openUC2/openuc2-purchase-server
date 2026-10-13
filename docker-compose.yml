@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  purchase-ledger:
+    build: .
+    container_name: purchase-ledger
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5050
